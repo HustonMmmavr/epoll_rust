@@ -18,7 +18,7 @@ use nix::sys::stat::Mode;
 use nix::sys::sendfile::{sendfile};
 use std::fs;
 
-const FILE_BUF: usize = 16384;
+const FILE_BUF: usize =  524288; //16384;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum ClientState {
@@ -184,6 +184,7 @@ impl HttpClient {
                     self.file_fd = match open(Path::new(&path), OFlag::O_RDONLY, mode) {
                         Ok(fd) => fd, 
                         Err(err) => {
+
                             println!("{:?}", err);
                             return Err(err);
                             // panic!();
@@ -197,6 +198,8 @@ impl HttpClient {
                 None => self.buffer_write = resp.to_vec_response()
             }
         }
+
+        // or open file every time when we cant open file
 
         if self.state == ClientState::WRITING {
             match write(self.socket, &self.buffer_write.as_slice()[self.writed..]) {
@@ -223,18 +226,36 @@ impl HttpClient {
 
         if self.state == ClientState::FILE_WRITING {
             let mut offt = self.file_sended as i64; 
-            match sendfile(self.socket, self.file_fd, Some(&mut offt), FILE_BUF) {
+            let need_to_send = self.file_len - self.file_sended;
+
+            let to_send = match FILE_BUF < need_to_send {
+                true => FILE_BUF,
+                false => need_to_send
+            };
+
+            // whats wrong
+            match sendfile(self.socket, self.file_fd, Some(&mut offt), to_send) {
                 Ok(sended) => {
                     self.file_sended += sended;
-                    if self.file_sended == self.file_len {
+                    if self.file_sended >= self.file_len {
                         self.state = ClientState::RESPONSE_WRITED;
                         close(self.file_fd);
                         return Ok(self.state.clone());
                     }
                 }, 
-                Err(err) => {
+                Err(Sys(err)) => {
                     print!("{:?}", err);
-                    return Err(err)
+                    if err == Errno::EAGAIN {
+                        return Ok(self.state.clone());
+                    }
+                        return Ok(self.state.clone());
+
+                    // return Err(Sys(err));
+                },
+                Err(err) => {
+                        return Ok(self.state.clone());
+
+                    // return Err(err)
                 }
             }
         }
@@ -243,6 +264,9 @@ impl HttpClient {
     }
 
 }
+
+// 26602944989
+// 26718100000
                     // println!("{:?}", str::from_utf8(self.buffer_write.as_slice()));
 
 
