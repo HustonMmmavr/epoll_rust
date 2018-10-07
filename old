@@ -1,0 +1,213 @@
+
+// use std::collections::V;
+
+
+        // let body_exist = self.body_exist.clone();
+        // let mut terminator = HTTP_TERMINATOR.to_owned();
+        // if !body_exist {
+            // headers_string += HTTP_TERMINATOR;
+        // }
+
+
+        // let mut resp_byte = Vec::new();
+        // resp_byte.append(&mut response_string.into_bytes());
+
+// use nix::unistd::close;X?S
+
+
+    // let res = panic::catch_unwind(|| {
+
+      // break;
+                    // return Err(Sys(err));
+
+
+
+                            // println!("{:?}", err);
+                            // panic!();
+                            // return Err(err);
+                            // panic!();
+
+        // );
+        // }
+
+                //     if err == Errno::EAGAIN {
+                //         return Ok(self.state.clone());
+                //     }
+                //         return Ok(self.state.clone());
+
+                //     // return Err(Sys(err));
+                // },
+                // Err(err) => {
+                //         return Ok(self.state.clone());
+
+                //     // return Err(err)
+                // }
+
+
+
+
+            // let mut offt = self.file_sended as i64; 
+            // let need_to_send = self.file_len - self.file_sended;
+
+            // let to_send = match FILE_BUF < need_to_send {
+            //     true => FILE_BUF,
+            //     false => need_to_send
+            // };
+
+
+// 26602944989
+// 26718100000
+                    // println!("{:?}", str::from_utf8(self.buffer_write.as_slice()));
+
+
+    // fn handle(&mut self, flg: EpollFlags) {
+    //     if self.state == ClientState::READING {
+    //         if self.interest == self.interest & EpollFlags::EPOLLIN {
+    //             self.read();
+    //         }
+    //     }
+    // } 
+
+
+        // fn create_response_part(req: &HttpRequest, is_get: bool) -> HttpResponse {
+    //     let mut path_to_file = req.uri.clone();
+    //     match FileHandler::get_file(&mut path_to_file, is_get) {
+    //         Ok(value) => {
+    //             let (body, size, ext) = value;
+    //             let mut headers: HashMap<String, String> = HashMap::new();
+    //             headers.insert(String::from("Content-type"), ext);
+    //             headers.insert(String::from("Content-Length"), size.to_string());
+    //             return HttpResponse::ok(headers, None);
+    //         },
+    //         Err(is_forbidden) => {
+    //             let status = match is_forbidden {
+    //                 true => return HttpResponse::forbidden(),
+    //                 false => return HttpResponse::not_found()
+    //             };
+    //         }
+    //     }
+    // }
+
+    // fn create_response(req: &HttpRequest) -> HttpResponse {
+    //     match req.method.as_ref() {
+    //         "GET" => return HttpClient::create_response_part(req, true),
+    //         "HEAD" => return HttpClient::create_response_part(req, false), 
+    //         _ => return HttpResponse::not_allowed()
+    //     }
+    // }
+
+
+    // let buffer = [0; BUFSIZE];
+
+    // let mut clients: HashMap<RawFd, Client> = HashMap::new();//SockFlag::EPOLLET
+
+
+
+    // let ac = vec![1, 2, 3];
+
+    // let bc = ac.as_slice();
+    // let cc = bc[1..].len();
+    // println!("{:?}", cc);
+
+
+
+// const BUFSIZE: usize =  16384;
+// #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+// pub enum State {
+//     Read,
+//     Write,
+// }
+
+// #[derive(Clone, Debug)]
+// pub struct Client {
+//     pub readed: Vec<u8>,
+//     pub state: State
+// }
+
+// impl Client {
+//     fn new() -> Self {
+//         Client {
+//             readed: Vec::new(),
+//             state: State::Read
+//         }
+//     }
+// }
+
+                    // println!("{:?}", clients.insert(client_fd, Client::new()));
+                    // clients.insert(client_fd, Client::new());
+                    // manager.add_client(client_fd, HttpClient::new(client_fd, EpollFlags::EPOLLIN));
+                // let mut client = clients.get_mut(&cur_socket).unwrap();
+                // let mut buf = [0;2048];
+                // let mut b = false;
+                // loop {
+                //     let mut total_len = client.readed.len();
+                //     let size = match read(cur_socket, &mut buf) {
+                //         Ok(size) => {
+                //             client.readed.extend_from_slice(&buf[..size]);
+                //             if (size == 0) {
+                //                 break;
+                //             }
+                //         },
+                //         Err(Sys(err)) =>  {
+                //             // print!("{:?}", e);
+                //             if (err != Errno::EAGAIN)  {
+                //                 print!("POPA1");
+                //             }
+                //             break;
+                //         },
+                //         Err(e) => {
+                //             print!("POPA");
+                //         }
+                //     };
+                // }
+
+                // let req = std::str::from_utf8(&client.readed.as_slice()).unwrap().to_string();
+                    
+                // if !( req.find("\n\n").is_some() || req.find("\r\n\r\n").is_some() ){
+                //     epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket, &mut epoll_events[i]);
+                //     close(cur_socket as i32)?;
+                //     println!("clienrt {:?} request {}", cur_socket, req);
+                //     continue;
+                // }
+
+                // let mut ev = EpollEvent::new(EpollFlags::EPOLLOUT, cur_socket as u64);
+                // match epoll_ctl(epfd, EpollOp::EpollCtlMod, cur_socket, &mut ev) {
+                //     Ok(e) => {},
+                //     Err(err) => println!("Read ctl Err {:?}", err)
+                // }
+
+                // client.state = State::Write;
+                // continue;
+
+
+                    // println!("write");
+                // let buf = "HTTP/1.1 200 Ok\nConnection: close\nContent-Type: text/plain\n\nha?\n\n";
+                // let buf_len = buf.len();
+                // let mut sended = 0;
+                // let mut need_to_close = true;
+                // // loop {
+                //     match write(cur_socket, &buf.as_bytes()[sended..]) {
+                //         Ok(len) => {
+                //         //     if len == 0 {
+                //         //         break;
+                //         //     }
+                //             sended += len;
+
+                //                 need_to_close = true;
+
+                //             if sended >=  buf_len {
+                //                 need_to_close = true;
+                //                 // break;
+                //             }
+                //         }, 
+                //         Err(Sys(e)) => { 
+                //             if (e != Errno::EAGAIN)  {
+                //             print!("POPA");
+                //             }
+                //             // break;
+                //         },
+                //         Err(e) => {
+                //             print!("{:?}", e);
+                //         }
+                //     }
+                // }        

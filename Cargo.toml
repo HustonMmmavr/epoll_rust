@@ -1,5 +1,5 @@
 [package]
-name = "async_server3"
+name = "epoll_rust"
 version = "0.1.0"
 authors = ["HustonMmmavr <huston.mavr@gmail.com>"]
 

@@ -1,6 +1,3 @@
-
-// pub enum 
-
 #[derive(Debug)]
 pub struct HttpRequest {
     pub uri: String,

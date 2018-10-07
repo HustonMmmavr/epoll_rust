@@ -7,12 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug async_server3",
+            "name": "Debug executable 'epoll_rust'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=async_server3"
-                ]
+                    "--bin=epoll_rust",
+                    "--package=epoll_rust"
+                ],
+                "filter": {
+                    "kind": "bin"
+                }
             },
             "args": [],
             "cwd": "${workspaceFolder}",
@@ -21,13 +25,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug tests in async_server3",
+            "name": "Debug unit tests in executable 'epoll_rust'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=async_server3"
-                ]
+                    "--bin=epoll_rust",
+                    "--package=epoll_rust"
+                ],
+                "filter": {
+                    "kind": "bin"
+                }
             },
             "args": [],
             "cwd": "${workspaceFolder}"

@@ -1,6 +1,5 @@
 use std::collections::{HashMap};
 use chrono::Local;
-// use std::collections::V;
 
 
 const HTTP_VERSION: &str = "HTTP/1.1";
@@ -124,19 +123,9 @@ impl HttpResponse {
             },
             None => {}
         }
-        
-        // let body_exist = self.body_exist.clone();
-        // let mut terminator = HTTP_TERMINATOR.to_owned();
-        // if !body_exist {
-            // headers_string += HTTP_TERMINATOR;
-        // }
-
+    
         let response_string = format!("{}{}{}", status_string, headers_string, HTTP_TERMINATOR);
-                //terminator);
-        let resp_byte = response_string.into_bytes().iter().map(|c|  *c).collect::<Vec<u8>>();
-        // let mut resp_byte = Vec::new();
-        // resp_byte.append(&mut response_string.into_bytes());
-        return resp_byte;
+        return response_string.into_bytes().iter().map(|c|  *c).collect::<Vec<u8>>();
     }
 
 }

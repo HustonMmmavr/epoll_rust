@@ -17,6 +17,8 @@ use nix::fcntl::{open, OFlag};
 use nix::sys::stat::Mode;
 use nix::sys::sendfile::{sendfile};
 use std::fs;
+use std::panic;
+use nix::sys::socket::sockopt::{SocketError};
 
 const FILE_BUF: usize =  524288; //16384;
 
@@ -51,6 +53,7 @@ pub struct HttpClient {
     file_fd: RawFd,
     file_len: usize,
     need_send_file: bool,
+    path_to_file: String
     // path1: &'a str
 }
 
@@ -70,7 +73,8 @@ impl HttpClient {
             path: String::new(),
             file_fd: 0,
             need_send_file: false,
-            file_len: 0
+            file_len: 0,
+            path_to_file: String::new()
         }
     }
 
@@ -93,7 +97,6 @@ impl HttpClient {
                     // we found EOF and nothing in buffer
                     if size == 0 && self.buffer_read.len() == 0 {
                         return Ok(ClientState::ERROR);
-                        // break;
                     }
 
                     if size == 0 {
@@ -104,7 +107,6 @@ impl HttpClient {
                     if err == Errno::EAGAIN {
                         break;
                     }
-                    // return Err(Sys(err));
                 },
                 Err(err) => return Err(err)
             }
@@ -181,16 +183,15 @@ impl HttpClient {
             match path {
                 Some(path) => {
                     let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
+                    self.file_len = fs::metadata(&path).unwrap().len() as usize;
+
                     self.file_fd = match open(Path::new(&path), OFlag::O_RDONLY, mode) {
                         Ok(fd) => fd, 
                         Err(err) => {
-
-                            println!("{:?}", err);
-                            return Err(err);
-                            // panic!();
+                            self.path_to_file = String::from(path);
+                            -1
                         }
                     }; 
-                    self.file_len = fs::metadata(&path).unwrap().len() as usize;
                     self.buffer_write = resp.to_vec_response();
                     self.need_send_file = true;
 
@@ -198,6 +199,8 @@ impl HttpClient {
                 None => self.buffer_write = resp.to_vec_response()
             }
         }
+
+        // close(self.file_fd);
 
         // or open file every time when we cant open file
 
@@ -215,26 +218,30 @@ impl HttpClient {
                     }
                 },
                 Err(err) => {
-                    if self.need_send_file {
-                        close(self.file_fd);
-                    }
-                    // close(self.file_fd);
                     print!("Write {:?}", err);
                 }
             }
         }
 
+        if self.file_fd == -1 {
+            let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
+            self.file_fd = match open(Path::new(&self.path_to_file), OFlag::O_RDONLY, mode) {
+                Ok(fd) => fd, 
+                Err(err) => {
+                    return Ok(self.state.clone());
+                }
+            }; 
+        }
+
+        // close(self.socket);
+        // shutdown(self.socket, Shutdown::Both);
         if self.state == ClientState::FILE_WRITING {
             let mut offt = self.file_sended as i64; 
-            let need_to_send = self.file_len - self.file_sended;
-
-            let to_send = match FILE_BUF < need_to_send {
-                true => FILE_BUF,
-                false => need_to_send
-            };
-
             // whats wrong
-            match sendfile(self.socket, self.file_fd, Some(&mut offt), to_send) {
+            // if getsockopt(self.socket, SocketError).unwrap() == -1 {
+            //     return Err(Error::Sys(Errno::EIO));//ErrorKind::Other, "oh no!"));
+            // }
+                match sendfile(self.socket, self.file_fd, Some(&mut offt), FILE_BUF) {
                 Ok(sended) => {
                     self.file_sended += sended;
                     if self.file_sended >= self.file_len {
@@ -243,65 +250,12 @@ impl HttpClient {
                         return Ok(self.state.clone());
                     }
                 }, 
-                Err(Sys(err)) => {
-                    print!("{:?}", err);
-                    if err == Errno::EAGAIN {
-                        return Ok(self.state.clone());
-                    }
-                        return Ok(self.state.clone());
-
-                    // return Err(Sys(err));
-                },
                 Err(err) => {
-                        return Ok(self.state.clone());
-
-                    // return Err(err)
+                    print!("{:?}", err);
                 }
             }
         }
         
         Ok(self.state.clone())
     }
-
 }
-
-// 26602944989
-// 26718100000
-                    // println!("{:?}", str::from_utf8(self.buffer_write.as_slice()));
-
-
-    // fn handle(&mut self, flg: EpollFlags) {
-    //     if self.state == ClientState::READING {
-    //         if self.interest == self.interest & EpollFlags::EPOLLIN {
-    //             self.read();
-    //         }
-    //     }
-    // } 
-
-
-        // fn create_response_part(req: &HttpRequest, is_get: bool) -> HttpResponse {
-    //     let mut path_to_file = req.uri.clone();
-    //     match FileHandler::get_file(&mut path_to_file, is_get) {
-    //         Ok(value) => {
-    //             let (body, size, ext) = value;
-    //             let mut headers: HashMap<String, String> = HashMap::new();
-    //             headers.insert(String::from("Content-type"), ext);
-    //             headers.insert(String::from("Content-Length"), size.to_string());
-    //             return HttpResponse::ok(headers, None);
-    //         },
-    //         Err(is_forbidden) => {
-    //             let status = match is_forbidden {
-    //                 true => return HttpResponse::forbidden(),
-    //                 false => return HttpResponse::not_found()
-    //             };
-    //         }
-    //     }
-    // }
-
-    // fn create_response(req: &HttpRequest) -> HttpResponse {
-    //     match req.method.as_ref() {
-    //         "GET" => return HttpClient::create_response_part(req, true),
-    //         "HEAD" => return HttpClient::create_response_part(req, false), 
-    //         _ => return HttpResponse::not_allowed()
-    //     }
-    // }

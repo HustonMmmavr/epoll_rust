@@ -8,7 +8,6 @@ mod http;
 use nix::sys::epoll::*;
 use nix::sys::socket::*;
 use nix::sys::epoll::EpollCreateFlags;
-// use nix::unistd::close;X?S
 use nix::sys::socket::sockopt::ReuseAddr;
 use std::collections::HashMap;
 use std::os::unix::io::RawFd;
@@ -200,6 +199,8 @@ fn epoll_loop(server_sock: RawFd)-> nix::Result<()> {
     }
 }
 
+use std::panic;
+
 fn main() {
 
     let server_sock = match socket(AddressFamily::Inet, SockType::Stream, SockFlag::SOCK_NONBLOCK, SockProtocol::Tcp) {
@@ -233,125 +234,10 @@ fn main() {
             )
         );
     }
-    epoll_loop(server_sock.clone());    
+         epoll_loop(server_sock.clone());
+
 
     for th in v {
         th.join();
     }
 }
-
-
-    // let buffer = [0; BUFSIZE];
-
-    // let mut clients: HashMap<RawFd, Client> = HashMap::new();//SockFlag::EPOLLET
-
-
-
-    // let ac = vec![1, 2, 3];
-
-    // let bc = ac.as_slice();
-    // let cc = bc[1..].len();
-    // println!("{:?}", cc);
-
-
-
-// const BUFSIZE: usize =  16384;
-// #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-// pub enum State {
-//     Read,
-//     Write,
-// }
-
-// #[derive(Clone, Debug)]
-// pub struct Client {
-//     pub readed: Vec<u8>,
-//     pub state: State
-// }
-
-// impl Client {
-//     fn new() -> Self {
-//         Client {
-//             readed: Vec::new(),
-//             state: State::Read
-//         }
-//     }
-// }
-
-                    // println!("{:?}", clients.insert(client_fd, Client::new()));
-                    // clients.insert(client_fd, Client::new());
-                    // manager.add_client(client_fd, HttpClient::new(client_fd, EpollFlags::EPOLLIN));
-                // let mut client = clients.get_mut(&cur_socket).unwrap();
-                // let mut buf = [0;2048];
-                // let mut b = false;
-                // loop {
-                //     let mut total_len = client.readed.len();
-                //     let size = match read(cur_socket, &mut buf) {
-                //         Ok(size) => {
-                //             client.readed.extend_from_slice(&buf[..size]);
-                //             if (size == 0) {
-                //                 break;
-                //             }
-                //         },
-                //         Err(Sys(err)) =>  {
-                //             // print!("{:?}", e);
-                //             if (err != Errno::EAGAIN)  {
-                //                 print!("POPA1");
-                //             }
-                //             break;
-                //         },
-                //         Err(e) => {
-                //             print!("POPA");
-                //         }
-                //     };
-                // }
-
-                // let req = std::str::from_utf8(&client.readed.as_slice()).unwrap().to_string();
-                    
-                // if !( req.find("\n\n").is_some() || req.find("\r\n\r\n").is_some() ){
-                //     epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket, &mut epoll_events[i]);
-                //     close(cur_socket as i32)?;
-                //     println!("clienrt {:?} request {}", cur_socket, req);
-                //     continue;
-                // }
-
-                // let mut ev = EpollEvent::new(EpollFlags::EPOLLOUT, cur_socket as u64);
-                // match epoll_ctl(epfd, EpollOp::EpollCtlMod, cur_socket, &mut ev) {
-                //     Ok(e) => {},
-                //     Err(err) => println!("Read ctl Err {:?}", err)
-                // }
-
-                // client.state = State::Write;
-                // continue;
-
-
-                    // println!("write");
-                // let buf = "HTTP/1.1 200 Ok\nConnection: close\nContent-Type: text/plain\n\nha?\n\n";
-                // let buf_len = buf.len();
-                // let mut sended = 0;
-                // let mut need_to_close = true;
-                // // loop {
-                //     match write(cur_socket, &buf.as_bytes()[sended..]) {
-                //         Ok(len) => {
-                //         //     if len == 0 {
-                //         //         break;
-                //         //     }
-                //             sended += len;
-
-                //                 need_to_close = true;
-
-                //             if sended >=  buf_len {
-                //                 need_to_close = true;
-                //                 // break;
-                //             }
-                //         }, 
-                //         Err(Sys(e)) => { 
-                //             if (e != Errno::EAGAIN)  {
-                //             print!("POPA");
-                //             }
-                //             // break;
-                //         },
-                //         Err(e) => {
-                //             print!("{:?}", e);
-                //         }
-                //     }
-                // }        
