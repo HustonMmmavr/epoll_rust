@@ -2,7 +2,7 @@ FROM rust:1.28
 
 # copy your source tree
 COPY ./httpd.conf /etc/httpd.conf
-COPY /home/mavr/http-test /www/static
+COPY ./../../../http-test /www/static
 COPY ./ ./
 
 

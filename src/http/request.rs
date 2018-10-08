@@ -49,7 +49,7 @@ impl HttpRequest {
         // 0 - method 1 - url 2 - httpver
         
         let mut stopPath: usize = 0;
-        if (request_info.len() < 3) {
+        if request_info.len() < 3 {
             return Err(());
         }
         for ch in request_info[1].chars() {

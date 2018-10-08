@@ -224,3 +224,367 @@ static DOCUMENT_ROOT: &'static str = "/home/mavr/http-test";
                 //         }
                 //     }
                 // }        
+
+
+
+    // pub fn readHandler(&mut self) -> Result<ClientState, nix:Error> {
+    //     match self.read() {
+    //         Ok(state) => {
+    //             if self.state != ClientState::ERROR {
+    //                 if self.readed == 0 {
+    //                     return 
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
+
+
+    // pub fn read(&mut self) -> Result<ClientState, io::Error> {
+    //     if self.state == ClientState::START || self.state == ClientState::READING {
+    //         self.state = ClientState::READING;
+    //         let mut buf = [0; 8192];
+    //         while true {
+    //             match self.socket.read(&mut buf[0..8192]) {
+    //                 Ok(len) =>  {
+    //                     if len == 0 {
+    //                         break;
+    //                     }
+    //                     self.readed += len;
+    //                     self.buffer_read.extend_from_slice(&buf[0..len]);
+    //                 }
+    //                 Err(err) => {
+    //                     if err.kind() == io::ErrorKind::WouldBlock {
+    //                         break;
+    //                     } else {
+    //                         return Err(err);
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     let request_string = match str::from_utf8(self.buffer_read.as_slice()) {
+    //         Ok(v) => v,
+    //         Err(_) => panic!("Incorrect string format") // todo deregister or else send err
+    //     };
+
+    //     // todo loop accept
+    //     self.req = match HttpRequest::parse(request_string) {
+    //         Ok(http_request) => Some(http_request),
+    //         Err(_) => None
+    //     };
+    //     self.state = ClientState::REQUEST_READED;
+    //     self.interest.remove(Ready::readable());
+    //     self.interest.insert(Ready::writable());
+    //     return Ok(self.state.clone());
+    // }
+
+    // pub fn write(&mut self) -> Result<ClientState, io::Error> {
+    //     if self.state == ClientState::REQUEST_READED {
+    //         self.state = ClientState::WRITING;
+    //         let mut response = self.process_request();
+    //         let vec_rep = response.to_vec_response();
+    //         self.len_write = vec_rep.len();
+    //         self.buffer_write = vec_rep;
+    //     }
+
+    //     let batch_size = 16384;
+
+    //     if self.writed < self.len_write {
+    //         // println!("Written state {:?}", )
+    //         self.state = ClientState::RESPONSE_WRITED;
+    //         self.interest.remove(Ready::writable());
+
+    //         let mut end;
+    //         if self.len_write - self.len_write < batch_size {
+    //             end = self.len_write;
+    //         } else {
+    //             end = self.writed + batch_size;
+    //         }
+    //         // match self.buffer_write.as_slice()[self.writed..end]) {                
+    //         match self.socket.write(&self.buffer_write.as_slice()[self.writed..end]) {
+    //             Ok(len) => {
+    //                 self.writed += len;
+    //             } 
+    //             Err(err) => if err.kind() == io::ErrorKind::WouldBlock {
+    //                 // println!("Write {:?}", err.kind());
+    //                 return Ok(self.state.clone());
+    //             } else {
+    //                 panic!("{:?}", err);
+    //             }
+    //         }
+    //         return Ok(self.state.clone());
+    //     }
+    //         self.interest.remove(Ready::writable());
+    //         self.state = ClientState::RESPONSE_WRITED;
+    //         return Ok(self.state.clone());
+
+    //     // if self.state == ClientState::WRITING {
+    //     //     while self.writed < self.len_write {
+    //     //         let mut end;
+    //     //         if self.len_write - self.len_write < batch_size {
+    //     //             end = self.len_write;
+    //     //         } else {
+    //     //             end = self.writed + batch_size;
+    //     //         }
+    //     //         let bytes = &self.buffer_write.as_slice()[self.writed..end];
+    //     //         // let io_vec: &IoVec = bytes.into();//[0, 16384].into;
+    //     //         match self.socket.write(bytes) {
+    //     //             Ok(len) => {
+    //     //                 self.writed += len;
+    //     //             },
+    //     //             Err(err) => {
+    //     //                 if err.kind() == io::ErrorKind::WouldBlock {
+    //     //                     return Ok(self.state.clone());
+    //     //                 } else {
+    //     //                     return Err(err)
+    //     //                 }
+    //     //             }
+    //     //         }
+    //     //     }
+
+    //     //     self.interest.remove(Ready::writable());
+    //     //     self.state = ClientState::RESPONSE_WRITED;
+    //     //     return Ok(self.state.clone());
+    //     // }
+    //     // return Ok(self.state.clone());
+    // }
+
+
+
+
+
+
+
+
+
+
+
+        // let mut ev = EpollEvent::new(EpollFlags::EPOLLOUT, cur_socket as u64);
+        // match epoll_ctl(epfd, EpollOp::EpollCtlMod, cur_socket, &mut ev) {
+        //     Ok(e) => {},
+        //     Err(err) => println!("Read ctl Err {:?}", err)
+        // }
+
+        // client.state = State::Write;
+
+
+            // }
+            // if self.writed >= self.len_write {
+            //     println!("Written state {:?}", )
+            //     self.state = ClientState::RESPONSE_WRITED;
+            //     self.interest.remove(Ready::writable());
+
+            // match self.socket.write_bufs(&[&io_vec]) {//&self.buffer_write.as_slice()[self.writed..end]) {                
+            //     // match self.socket.write(&self.buffer_write.as_slice()[self.writed..end]) {
+            //         Ok(len) => {
+            //             // if len == 0 {
+            //             //     break;
+            //             // }
+            //             self.writed += len;
+
+            //         } 
+            //         Err(err) => if err.kind() == io::ErrorKind::WouldBlock {
+            //             println!("Write {:?}", err.kind());
+            //             return Ok(self.state.clone());
+            //         } else {
+            //             panic!("{:?}", err);
+            //         }
+            //     }
+
+
+// pub fn read(&mut self) -> Result<ClientState, io::Error> {
+//         if self.state == ClientState::START || self.state == ClientState::READING {
+//             self.state = ClientState::READING;
+//             let mut buf = [0; 8192];
+//             let mut bytes = [0; 8192];
+//             let mut io_vec = IoVec::from_bytes_mut(&mut bytes).unwrap();
+//             // let buf: [IoVec]
+//             // let mut buf = [0; 8192];
+//             // let len = self.socket.read_bufs(&mut [io_vec]).unwrap();
+//             // let buf = io_vec.as_bytes();
+//         //     while true {
+//         //         match self.socket.read(&mut buf[0..8192]) {
+//         //             Ok(len) => {
+//         //                 if len > 0 {
+//         //                     self.readed += len;
+//         //                     self.buffer_read.extend_from_slice(&buf[..len]);
+//         //                     // return Ok(self.state.clone());
+//         //                 } else {
+//         //                     break
+//         //                     self.state = ClientState::REQUEST_READED;
+//         //                 }
+//         //             },
+//         //             Err (err) => { 
+//         //                 if err.kind() == io::ErrorKind::WouldBlock {
+//         //                     self.state = ClientState::REQUEST_READED;
+//         //                     return Ok(self.state.clone());
+//         //                 } else {
+//         //                     return Err(err)
+//         //                 }
+//         //             }
+//         //         }
+//         //     }
+//         // }
+//             let mut state = io::ErrorKind::Other;
+//             while true {//state != io::ErrorKind::WouldBlock {
+//                 // self.socket.read_bufs;
+//                 match self.socket.read_bufs(&mut [io_vec]) {
+//                 // match self.socket.read(&mut buf[0..8192]) {
+//                     Ok(len) =>  {
+//                         if len == 0 {
+//                             break;
+//                         }
+//                         self.readed += len;
+//                         let buf = io_vec.as_bytes();
+//                         self.buffer_read.extend_from_slice(&io_vec.as_bytes()[0..len]);
+//                     }
+//                     Err(err) => {
+//                         // println!("Read err {:?}", err);
+//                         if err.kind() == io::ErrorKind::WouldBlock {
+//                             // println!("{:?}", err.kind());
+//                             break;
+//                             // return Ok(self.state.clone());
+//                             // state = err.kind();
+//                         } else {
+//                             return Err(err);
+//                             // let c = 1;
+//                             // return;  // return error
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         let request_string = match str::from_utf8(self.buffer_read.as_slice()) {
+//             Ok(v) => v,
+//             Err(_) => panic!("Incorrect string format") // todo deregister or else send err
+//         };
+
+//         // todo loop accept
+//         self.req = match HttpRequest::parse(request_string) {
+//             Ok(http_request) => Some(http_request),
+//             Err(_) => None
+//         };
+//         self.state = ClientState::REQUEST_READED;
+//         self.interest.remove(Ready::readable());
+//         self.interest.insert(Ready::writable());
+//         return Ok(self.state.clone());
+//     }
+
+            //     // let mut state = io::ErrorKind::Other;
+            // // while true {//state != io::ErrorKind::WouldBlock {
+
+            
+            //     match self.socket.read(&mut buf[0..8192]) {
+            //         Ok(len) =>  {
+            //             if len > 0 {
+            //                 self.readed += len;
+            //                 self.buffer_read.extend_from_slice(&buf);
+            //                 return Ok(self.state.clone());
+            //             } 
+            //         }
+            //         Err(err) => {
+            //             // println!("Read err {:?}", err);
+            //             if err.kind() == io::ErrorKind::WouldBlock {
+            //                 // println!("{:?}", err.kind());
+            //                 // return Ok(self.state.clone());
+            //                 // return Ok(self.state.clone());
+            //                 // state = err.kind();
+            //             } else {
+            //                 return Err(err);
+            //                 // let c = 1;
+            //                 // return;  // return error
+            //             }
+            //         }
+            //     }
+            // // }
+
+
+
+//   pub fn read(&mut self) -> Result<ClientState, io::Error> {
+//         if self.state == ClientState::START || self.state == ClientState::READING {
+//             self.state = ClientState::READING;
+//             let mut bytes = [0; 8192];
+//             let mut state = io::ErrorKind::Other;
+//             match self.socket.read(&mut bytes) {
+//                 Ok(len) =>  {
+//                     self.readed += len;
+//                     self.buffer_read.extend_from_slice(&bytes[0..len]);
+//                     return Ok(self.state.clone());
+//                 }
+//                 Err(err) => {
+//                     if err.kind() != io::ErrorKind::WouldBlock {
+//                         return Err(err);
+//                     }
+//                 }
+//             }
+//         }
+
+//         let request_string = match str::from_utf8(self.buffer_read.as_slice()) {
+//             Ok(v) => v,
+//             Err(_) => panic!("Incorrect string format") // todo deregister or else send err
+//         };
+
+//         // todo loop accept
+//         self.req = match HttpRequest::parse(request_string) {
+//             Ok(http_request) => Some(http_request),
+//             Err(_) => None
+//         };
+//         self.state = ClientState::REQUEST_READED;
+//         self.interest.remove(Ready::readable());
+//         self.interest.insert(Ready::writable());
+//         return Ok(self.state.clone());
+//     }
+
+
+
+
+
+# FROM ubuntu:18.04
+# #
+# # Установка postgresql
+# #
+
+# RUN apt-get -y update && apt-get install -y wget git && apt-get install curl -y && apt-get install build-essential -y
+
+# USER root
+# RUN mkdir /rust
+# WORKDIR /rust
+# RUN curl https://sh.rustup.rs -s >> rustup.sh
+# RUN chmod 755 /rust/rustup.sh
+# RUN ./rustup.sh -y
+# ENV PATH=/root/.cargo/bin:$PATH SSL_VERSION=1.0.2h
+# RUN apt-get remove --purge -y curl && apt-get autoclean && apt-get clean
+# RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+
+# # Копируем исходный код в Docker-контейнер
+# COPY httpd.conf /etc/httpd.conf
+# ENV WORK /opt/rust_db
+# ADD src/ $WORK/src/
+# ADD V1__userinit.sql $WORK/schema.sql
+
+# #RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
+# #№RUN echo 'source $HOME/.cargo/env'
+# # RUN ls -al /root
+# #RUN echo $HOME
+# #ADD install.sh $WORK/install.sh
+
+# # install rust and cargo
+
+
+# WORKDIR $WORK
+# #RUN chmod +x install.sh && ./install.sh && rm install.sh
+
+# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# ADD Cargo.toml $WORK/Cargo.toml
+# #RUN cargo update -p libc
+# #RUN bash -c 'source $HOME/.cargo/env; cargo build -v --release'
+# RUN cargo build -v --release
+
+# EXPOSE 5000
+
+# ENV PGPASSWORD 951103
+# CMD service postgresql start && cd $WORK/ && psql -h localhost -U mavr -d test -f schema.sql && ./target/release/RustDb

@@ -2,7 +2,6 @@ extern crate nix;
 extern crate chrono;
 extern crate num_cpus;
 mod file_handler;
-mod client_manager;
 mod config_reader;
 mod client;
 mod http;
@@ -26,7 +25,6 @@ macro_rules! debug_print {
     ($( $args:expr ),*) => { println!( $( $args ),* ); }
 }
 
-// Non-debug version
 #[cfg(not(feature = "my_debug"))]
 macro_rules! debug_print {
     ($( $args:expr ),*) => {}
@@ -47,8 +45,6 @@ fn socket_to_nonblock(sock: RawFd) -> Result<(), nix::Error> {
 }
 
 fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
-    // let path = "/home/mavr/http-test";
-    // let mut manager = ClientManager::new("/home/mavr/httptest");
     let mut clients: HashMap<RawFd, HttpClient<'a>> = HashMap::new();
     let epfd = epoll_create1(EpollCreateFlags::from_bits(0).unwrap())?;
 
@@ -62,7 +58,6 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
 
     let mut refused = 0;
     loop {
-        // println!("wait");
         let nfds = match epoll_wait(epfd, &mut epoll_events, -1) {
             Ok(n) => n,
             Err(e) => {
@@ -78,7 +73,7 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
             if cur_event == cur_event & EpollFlags::EPOLLERR || cur_event == cur_event & EpollFlags::EPOLLHUP ||
                  cur_event != cur_event & (EpollFlags::EPOLLIN|EpollFlags::EPOLLOUT) || cur_event == cur_event & EpollFlags::EPOLLRDHUP {
                     debug_print!("error big if {:?}", cur_event);
-                    println!("hi");
+                    debug_print!("hi");
                     close(epoll_events[i].data() as i32);
                     epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket, &mut epoll_events[i]);
                     let client = clients.remove(&cur_socket).unwrap();
@@ -114,7 +109,6 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
                         Err(err) => println!("Server accept ctl {:?}", err)
                     }
                     clients.insert(client_fd, HttpClient::new(client_fd, EpollFlags::EPOLLIN, path));
-                    // clients.insert(client_fd. Client::new());
                     break;
                 }
                 debug_print!("loop breaked");
@@ -122,12 +116,10 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
             }
                 
             if cur_event == cur_event & EpollFlags::EPOLLIN {
-                // println!("read");
                 let mut is_broken = false;
                 
                 {
                     let client = clients.get_mut(&cur_socket).unwrap();
-                    // let client = manager.get_client(cur_socket);
                     match client.read() {
                         Ok(cli_state) => {
                             match cli_state {
@@ -155,8 +147,6 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
                     close(cur_socket);
                     epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket, &mut epoll_events[i]);
                     let cl = clients.remove(&cur_socket);
-                    // manager.remove_client(cur_socket);
-                    // println!("{:?}", cl);                    
                 }
                 continue;
             }
@@ -165,7 +155,6 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
 
                 let mut need_to_close = false;
                 {
-                    // let client = manager.get_client(cur_socket);
                     let client = clients.get_mut(&cur_socket).unwrap();
                     match client.write(path) {
                         Ok(state) => {
@@ -187,7 +176,6 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
                         Ok(e) => {},
                         Err(err) => println!("Err epollctl write {:?}", err)
                     }
-                    // manager.remove_client(cur_socket);
 
                     let cl = clients.remove(&cur_socket).unwrap();
                     match shutdown(cur_socket as i32, Shutdown::Both) {
