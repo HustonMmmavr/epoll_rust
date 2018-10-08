@@ -1,4 +1,17 @@
+static DOCUMENT_ROOT: &'static str = "/home/mavr/http-test";
 
+
+                // let mut data = None;
+                // if need_to_read {
+                    // let mut bytes = Vec::new();
+                    // let mut file = File::open(path).unwrap();
+                    // file.read_to_end(&mut bytes);
+                    // data = Some(bytes);
+                // }
+
+
+
+                            //FileHandler::get_http_ext(path.extension().unwrap().to_str().unwrap())
 // use std::collections::V;
 
 

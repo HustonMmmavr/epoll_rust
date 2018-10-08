@@ -1,0 +1,46 @@
+FROM ubuntu:18.04
+#
+# Установка postgresql
+#
+
+RUN apt-get -y update && apt-get install -y wget git && apt-get install curl -y && apt-get install build-essential -y
+
+USER root
+RUN mkdir /rust
+WORKDIR /rust
+RUN curl https://sh.rustup.rs -s >> rustup.sh
+RUN chmod 755 /rust/rustup.sh
+RUN ./rustup.sh -y
+ENV PATH=/root/.cargo/bin:$PATH SSL_VERSION=1.0.2h
+RUN apt-get remove --purge -y curl && apt-get autoclean && apt-get clean
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+
+# Копируем исходный код в Docker-контейнер
+COPY httpd.conf /etc/httpd.conf
+ENV WORK /opt/rust_db
+ADD src/ $WORK/src/
+ADD V1__userinit.sql $WORK/schema.sql
+
+#RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
+#№RUN echo 'source $HOME/.cargo/env'
+# RUN ls -al /root
+#RUN echo $HOME
+#ADD install.sh $WORK/install.sh
+
+# install rust and cargo
+
+
+WORKDIR $WORK
+#RUN chmod +x install.sh && ./install.sh && rm install.sh
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ADD Cargo.toml $WORK/Cargo.toml
+#RUN cargo update -p libc
+#RUN bash -c 'source $HOME/.cargo/env; cargo build -v --release'
+RUN cargo build -v --release
+
+EXPOSE 5000
+
+ENV PGPASSWORD 951103
+CMD service postgresql start && cd $WORK/ && psql -h localhost -U mavr -d test -f schema.sql && ./target/release/RustDb

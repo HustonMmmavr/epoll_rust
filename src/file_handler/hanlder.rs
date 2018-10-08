@@ -3,14 +3,11 @@ use std::path::Path;
 use std::fs::File;
 use std::io::prelude::*;
 
-static DOCUMENT_ROOT: &'static str = "/home/mavr/http-test";
-
-
 pub struct FileHandler;
 
 impl FileHandler {
 
-    pub fn get_file(path_to_file: &mut String, need_to_read: bool) -> Result<(u64, String, String), bool> {
+    pub fn get_file(path: &str, path_to_file: &mut String, need_to_read: bool) -> Result<(u64, String, String), bool> {
 
         // err privilegies access
         if path_to_file.contains("/..") {
@@ -19,7 +16,7 @@ impl FileHandler {
 
 
         let mut is_dir = true;
-        let mut new_path_to_file = format!("{}{}", DOCUMENT_ROOT, path_to_file);
+        let mut new_path_to_file = format!("{}{}", path, path_to_file);
         match path_to_file.pop() {
             Some(ch) => {
                 let d = ch;        
@@ -52,16 +49,3 @@ impl FileHandler {
         }
     }
 }
-
-
-                // let mut data = None;
-                // if need_to_read {
-                    // let mut bytes = Vec::new();
-                    // let mut file = File::open(path).unwrap();
-                    // file.read_to_end(&mut bytes);
-                    // data = Some(bytes);
-                // }
-
-
-
-                            //FileHandler::get_http_ext(path.extension().unwrap().to_str().unwrap())

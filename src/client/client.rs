@@ -20,7 +20,8 @@ use std::fs;
 use std::panic;
 use nix::sys::socket::sockopt::{SocketError};
 
-const FILE_BUF: usize =  524288; //16384;
+const FILE_BUF: usize =  524288; 
+const READ_LEN: usize = 8192;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum ClientState {
@@ -35,10 +36,9 @@ pub enum ClientState {
     ERROR
 }
 
-const READ_LEN: usize = 8192;
 
 #[derive(Debug)]
-pub struct HttpClient {
+pub struct HttpClient<'a> {
     pub socket: RawFd,
     pub state: ClientState,
     interest: EpollFlags,
@@ -53,12 +53,12 @@ pub struct HttpClient {
     file_fd: RawFd,
     file_len: usize,
     need_send_file: bool,
-    path_to_file: String
-    // path1: &'a str
+    path_to_file: String,
+    path1: &'a str
 }
 
-impl HttpClient {
-    pub fn new(client: RawFd, interest: EpollFlags) -> HttpClient {
+impl<'a> HttpClient<'a> {
+    pub fn new(client: RawFd, interest: EpollFlags, s: &'a str) -> HttpClient {
         HttpClient {
             socket: client,
             state: ClientState::READING,
@@ -74,16 +74,17 @@ impl HttpClient {
             file_fd: 0,
             need_send_file: false,
             file_len: 0,
-            path_to_file: String::new()
+            path_to_file: String::new(),
+            path1: s
         }
     }
 
-    fn process_request(&self) -> HttpResponse {
-        let mut http_response = match self.req {
-            Some(ref http_request) => return HttpClient::create_response(http_request).0,
-            None => return HttpResponse::bad_request()
-        };
-    }
+    // fn process_request(&self) -> HttpResponse {
+    //     let mut http_response = match self.req {
+    //         Some(ref http_request) => return self.create_response().0,
+    //         None => return HttpResponse::bad_request()
+    //     };
+    // }
 
     pub fn read(&mut self) -> Result<ClientState, Error> {
         // if self.state == ClientState::READING 
@@ -141,45 +142,85 @@ impl HttpClient {
         }
     } 
 
-    fn create_response_part(req: &HttpRequest, is_get: bool) -> (HttpResponse, Option<String>) {
-        let mut path_to_file = req.uri.clone();
-        match FileHandler::get_file(&mut path_to_file, is_get) {
-            Ok(value) => {
-                let (size, path, ext) = value;
-                let mut headers: HashMap<String, String> = HashMap::new();
-                headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
-                headers.insert(String::from("Content-Length"), size.to_string());
-                let mut path = Some(path);
-                if !is_get  {
-                    path = None;
+    fn create_response_part(&self, is_get: bool) -> (HttpResponse, Option<String>) {
+        match self.req {
+            Some(ref req) => {
+                let mut path_to_file = req.uri.clone();
+                match FileHandler::get_file(self.path1, &mut path_to_file, is_get) {
+                    Ok(value) => {
+                        let (size, path, ext) = value;
+                        let mut headers: HashMap<String, String> = HashMap::new();
+                        headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
+                        headers.insert(String::from("Content-Length"), size.to_string());
+                        let mut path = Some(path);
+                        if !is_get  {
+                            path = None;
+                        }
+                        return (HttpResponse::ok(headers, is_get), path);
+                    },
+                    Err(is_forbidden) => {
+                        match is_forbidden {
+                            true => return (HttpResponse::forbidden(), None),
+                            false => return (HttpResponse::not_found(), None)
+                        }
+                    }
                 }
-                return (HttpResponse::ok(headers, is_get), path);
             },
-            Err(is_forbidden) => {
-                let status = match is_forbidden {
-                    true => return (HttpResponse::forbidden(), None),
-                    false => return (HttpResponse::not_found(), None)
-                };
-            }
+            None => return (HttpResponse::not_found(), None)
         }
+        // let req = self.req.unwrap();
+        // let mut path_to_file = req.uri.clone();
+        // match FileHandler::get_file(self.path1, &mut path_to_file, is_get) {
+        //     Ok(value) => {
+        //         let (size, path, ext) = value;
+        //         let mut headers: HashMap<String, String> = HashMap::new();
+        //         headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
+        //         headers.insert(String::from("Content-Length"), size.to_string());
+        //         let mut path = Some(path);
+        //         if !is_get  {
+        //             path = None;
+        //         }
+        //         return (HttpResponse::ok(headers, is_get), path);
+        //     },
+        //     Err(is_forbidden) => {
+        //         let status = match is_forbidden {
+        //             true => return (HttpResponse::forbidden(), None),
+        //             false => return (HttpResponse::not_found(), None)
+        //         };
+        //     }
+        // }
     }
 
-
-    fn create_response(req: &HttpRequest) -> (HttpResponse, Option<String>) {
-        match req.method.as_ref() {
-            "GET" => return HttpClient::create_response_part(req, true),
-            "HEAD" => {
-                println!("HEAD");
-                return HttpClient::create_response_part(req, false);
-            } 
+    fn create_response(&self) -> (HttpResponse, Option<String>) {
+        let a = match self.req {
+            Some(ref req) => {
+                match req.method.as_ref() {
+                    "GET" => 0,
+                    "HEAD" => 1,
+                    _ => 2
+                }
+            }
+            None => 2
+        };
+        match a {
+            0 => return self.create_response_part(true),
+            1 => return self.create_response_part(false),
             _ => return (HttpResponse::not_allowed(), None)
         }
+        // match self.req.unwrap().method.as_ref() {
+        //     "GET" => return self.create_response_part(true),
+        //     "HEAD" => {
+        //         println!("HEAD");
+        //         return self.create_response_part(false);
+        //     } 
+        //     _ => return (HttpResponse::not_allowed(), None)
+        // }
     }
 
     pub fn write(&mut self, path: &str) -> Result<ClientState, Error> {
         if self.state == ClientState::REQUEST_READED {
             self.state = ClientState::WRITING;
-            let (mut resp, path) = HttpClient::create_response(&self.req.take().unwrap());
+            let (mut resp, path) = self.create_response();//HttpClient::create_response(&self.req.take().unwrap());
             match path {
                 Some(path) => {
                     let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
@@ -200,10 +241,6 @@ impl HttpClient {
             }
         }
 
-        // close(self.file_fd);
-
-        // or open file every time when we cant open file
-
         if self.state == ClientState::WRITING {
             match write(self.socket, &self.buffer_write.as_slice()[self.writed..]) {
                 Ok(size) => {
@@ -219,6 +256,16 @@ impl HttpClient {
                 },
                 Err(err) => {
                     print!("Write {:?}", err);
+                    // this part
+                    match err {
+                        Sys(errno) => {
+                            match errno {
+                                Errno::EAGAIN => {},
+                                _ => return Err(Sys(errno))
+                            }
+                        }
+                        _ => return Err(err)
+                    }
                 }
             }
         }
@@ -237,25 +284,77 @@ impl HttpClient {
         // shutdown(self.socket, Shutdown::Both);
         if self.state == ClientState::FILE_WRITING {
             let mut offt = self.file_sended as i64; 
-            // whats wrong
-            // if getsockopt(self.socket, SocketError).unwrap() == -1 {
-            //     return Err(Error::Sys(Errno::EIO));//ErrorKind::Other, "oh no!"));
-            // }
-                match sendfile(self.socket, self.file_fd, Some(&mut offt), FILE_BUF) {
+            match sendfile(self.socket, self.file_fd, Some(&mut offt), FILE_BUF) {
                 Ok(sended) => {
                     self.file_sended += sended;
                     if self.file_sended >= self.file_len {
                         self.state = ClientState::RESPONSE_WRITED;
-                        close(self.file_fd);
+                        //close(self.file_fd);
+                        //self.file_fd = -1;
                         return Ok(self.state.clone());
                     }
                 }, 
                 Err(err) => {
-                    print!("{:?}", err);
+                    print!("Sendfile {:?}", err);
+                    match err {
+                        Sys(errno) => {
+                            match errno {
+                                Errno::EAGAIN => {},
+                                _ => return Err(Sys(errno))
+                            }
+                        }
+                        _ => return Err(err)
+                    }
                 }
             }
         }
         
         Ok(self.state.clone())
     }
+
+    pub fn clear(&self) {
+        if (self.file_fd != -1) {
+            close(self.file_fd);
+        }
+    }
 }
+
+
+    // fn create_response(req: &HttpRequest) -> (HttpResponse, Option<String>) {
+    //     match req.method.as_ref() {
+    //         "GET" => return HttpClient::create_response_part(req, true),
+    //         "HEAD" => {
+    //             println!("HEAD");
+    //             return HttpClient::create_response_part(req, false);
+    //         } 
+    //         _ => return (HttpResponse::not_allowed(), None)
+    //     }
+    // }
+
+        // close(self.file_fd);
+
+        // or open file every time when we cant open file
+
+
+    // fn create_response_part(req: &HttpRequest, is_get: bool) -> (HttpResponse, Option<String>) {
+    //     let mut path_to_file = req.uri.clone();
+    //     match FileHandler::get_file(self.path1, &mut path_to_file, is_get) {
+    //         Ok(value) => {
+    //             let (size, path, ext) = value;
+    //             let mut headers: HashMap<String, String> = HashMap::new();
+    //             headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
+    //             headers.insert(String::from("Content-Length"), size.to_string());
+    //             let mut path = Some(path);
+    //             if !is_get  {
+    //                 path = None;
+    //             }
+    //             return (HttpResponse::ok(headers, is_get), path);
+    //         },
+    //         Err(is_forbidden) => {
+    //             let status = match is_forbidden {
+    //                 true => return (HttpResponse::forbidden(), None),
+    //                 false => return (HttpResponse::not_found(), None)
+    //             };
+    //         }
+    //     }
+    // }

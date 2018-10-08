@@ -1,11 +1,13 @@
 extern crate nix;
 extern crate chrono;
+extern crate num_cpus;
 mod file_handler;
 mod client_manager;
-
+mod config_reader;
 mod client;
 mod http;
 use nix::sys::epoll::*;
+use config_reader::reader::ConfigReader;
 use nix::sys::socket::*;
 use nix::sys::epoll::EpollCreateFlags;
 use nix::sys::socket::sockopt::ReuseAddr;
@@ -18,7 +20,6 @@ use nix::fcntl::*;
 use std::thread;
 use nix::Error::Sys;
 use client::client::{ClientState, HttpClient};
-use client_manager::client_manager::ClientManager;
 
 #[cfg(feature = "my_debug")]
 macro_rules! debug_print {
@@ -45,10 +46,10 @@ fn socket_to_nonblock(sock: RawFd) -> Result<(), nix::Error> {
     }
 }
 
-fn epoll_loop(server_sock: RawFd)-> nix::Result<()> {
-    let path = "/home/mavr/httptest";
+fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
+    // let path = "/home/mavr/http-test";
     // let mut manager = ClientManager::new("/home/mavr/httptest");
-    let mut clients: HashMap<RawFd, HttpClient> = HashMap::new();
+    let mut clients: HashMap<RawFd, HttpClient<'a>> = HashMap::new();
     let epfd = epoll_create1(EpollCreateFlags::from_bits(0).unwrap())?;
 
     let mut ev = EpollEvent::new(EpollFlags::EPOLLIN, server_sock as u64);
@@ -75,9 +76,13 @@ fn epoll_loop(server_sock: RawFd)-> nix::Result<()> {
             let cur_event = epoll_events[i].events();
 
             if cur_event == cur_event & EpollFlags::EPOLLERR || cur_event == cur_event & EpollFlags::EPOLLHUP ||
-                 cur_event != cur_event & (EpollFlags::EPOLLIN|EpollFlags::EPOLLOUT) {
+                 cur_event != cur_event & (EpollFlags::EPOLLIN|EpollFlags::EPOLLOUT) || cur_event == cur_event & EpollFlags::EPOLLRDHUP {
                     debug_print!("error big if {:?}", cur_event);
+                    println!("hi");
                     close(epoll_events[i].data() as i32);
+                    epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket, &mut epoll_events[i]);
+                    let client = clients.remove(&cur_socket).unwrap();
+                    client.clear();
                     continue;
             }                
 
@@ -93,7 +98,7 @@ fn epoll_loop(server_sock: RawFd)-> nix::Result<()> {
                         }
                         Err(err) => {
                             refused += 1;
-                            println!("Error accept {:?}", err);
+                            debug_print!("Error accept {:?}", err);
                             break;
                         }
                     };
@@ -108,7 +113,7 @@ fn epoll_loop(server_sock: RawFd)-> nix::Result<()> {
                         Ok(e) => {},
                         Err(err) => println!("Server accept ctl {:?}", err)
                     }
-                    clients.insert(client_fd, HttpClient::new(client_fd, EpollFlags::EPOLLIN));
+                    clients.insert(client_fd, HttpClient::new(client_fd, EpollFlags::EPOLLIN, path));
                     // clients.insert(client_fd. Client::new());
                     break;
                 }
@@ -184,13 +189,14 @@ fn epoll_loop(server_sock: RawFd)-> nix::Result<()> {
                     }
                     // manager.remove_client(cur_socket);
 
-                    clients.remove(&cur_socket);
+                    let cl = clients.remove(&cur_socket).unwrap();
                     match shutdown(cur_socket as i32, Shutdown::Both) {
                         Ok(e) => {},
                         Err(err) => println!("Err shutdown {:?}", err)
                     }
                     close(cur_socket as i32)?;
                     closed += 1;
+                    cl.clear();
                     debug_print!("closed: {:?}", closed);
                 }
             }
@@ -199,9 +205,14 @@ fn epoll_loop(server_sock: RawFd)-> nix::Result<()> {
     }
 }
 
-use std::panic;
-
 fn main() {
+    let config = match ConfigReader::read() {
+        Ok(conf) => conf, 
+        Err(err) => {
+            println!("Error parse config {:?}", err);
+            panic!("");
+        }
+    };
 
     let server_sock = match socket(AddressFamily::Inet, SockType::Stream, SockFlag::SOCK_NONBLOCK, SockProtocol::Tcp) {
         Ok(sock) => sock,
@@ -212,7 +223,7 @@ fn main() {
         Ok(_) => {},
         Err(err) => panic!("Error set sock opt {:?}", err)
     }
-    let addr = SockAddr::new_inet(InetAddr::new(IpAddr::new_v4(127, 0, 0, 1), 5467));
+    let addr = SockAddr::new_inet(InetAddr::new(IpAddr::new_v4(0, 0, 0, 0), config.get_port() as u16));
     
     match bind(server_sock, &addr) {
         Ok(_) => {},
@@ -227,15 +238,17 @@ fn main() {
     
     let mut v = vec![];
 
-    for i in 0..3 {
+
+    let cpu_limit = config.get_cpu_count();
+    println!("cpu limit {:?}", cpu_limit);
+    for i in 0..cpu_limit {
+        let path = config.get_path_to_static();
         v.push(thread::spawn(move || {
-                    epoll_loop(server_sock.clone());
+                    epoll_loop(server_sock.clone(), &path);
                 }
             )
         );
     }
-         epoll_loop(server_sock.clone());
-
 
     for th in v {
         th.join();
