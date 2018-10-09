@@ -71,7 +71,7 @@ impl<'a> HttpClient<'a> {
             file_sended: 0,
             len_write: 0,
             path: String::new(),
-            file_fd: 0,
+            file_fd: -1,
             need_send_file: false,
             file_len: 0,
             path_to_file: String::new(),
@@ -270,7 +270,7 @@ impl<'a> HttpClient<'a> {
             }
         }
 
-        if self.file_fd == -1 {
+        if self.file_fd == -1 && self.need_send_file {
             let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
             self.file_fd = match open(Path::new(&self.path_to_file), OFlag::O_RDONLY, mode) {
                 Ok(fd) => fd, 

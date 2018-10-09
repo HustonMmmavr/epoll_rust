@@ -2,11 +2,11 @@ FROM rust:1.28
 
 # copy your source tree
 COPY ./httpd.conf /etc/httpd.conf
-COPY ./../../../http-test /www/static
+#COPY ./../../../http-test /www/static
 COPY ./ ./
 
 
-CMD cat ./httpd.conf && cat /etc/httpd.conf
+# CMD cat ./httpd.conf && cat /etc/httpd.conf
 # build for release
 RUN cargo build --release
 
