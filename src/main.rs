@@ -228,7 +228,7 @@ fn main() {
 
 
     let cpu_limit = config.get_cpu_count();
-    println!("cpu limit {:?}", cpu_limit);
+    // println!("cpu limit {:?}", cpu_limit);
     for i in 0..cpu_limit {
         let path = config.get_path_to_static();
         v.push(thread::spawn(move || {

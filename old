@@ -1,3 +1,93 @@
+  // if self.state == ClientState::READING 
+
+
+        // let req = self.req.unwrap();
+        // let mut path_to_file = req.uri.clone();
+        // match FileHandler::get_file(self.path1, &mut path_to_file, is_get) {
+        //     Ok(value) => {
+        //         let (size, path, ext) = value;
+        //         let mut headers: HashMap<String, String> = HashMap::new();
+        //         headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
+        //         headers.insert(String::from("Content-Length"), size.to_string());
+        //         let mut path = Some(path);
+        //         if !is_get  {
+        //             path = None;
+        //         }
+        //         return (HttpResponse::ok(headers, is_get), path);
+        //     },
+        //     Err(is_forbidden) => {
+        //         let status = match is_forbidden {
+        //             true => return (HttpResponse::forbidden(), None),
+        //             false => return (HttpResponse::not_found(), None)
+        //         };
+        //     }
+        // }
+
+
+        // match self.req.unwrap().method.as_ref() {
+        //     "GET" => return self.create_response_part(true),
+        //     "HEAD" => {
+        //         println!("HEAD");
+        //         return self.create_response_part(false);
+        //     } 
+        //     _ => return (HttpResponse::not_allowed(), None)
+        // }
+
+
+                        //close(self.file_fd);
+                        //self.file_fd = -1;
+
+        // close(self.socket);
+        // shutdown(self.socket, Shutdown::Both);
+
+
+    // fn process_request(&self) -> HttpResponse {
+    //     let mut http_response = match self.req {
+    //         Some(ref http_request) => return self.create_response().0,
+    //         None => return HttpResponse::bad_request()
+    //     };
+    // }
+
+    // fn create_response(req: &HttpRequest) -> (HttpResponse, Option<String>) {
+    //     match req.method.as_ref() {
+    //         "GET" => return HttpClient::create_response_part(req, true),
+    //         "HEAD" => {
+    //             println!("HEAD");
+    //             return HttpClient::create_response_part(req, false);
+    //         } 
+    //         _ => return (HttpResponse::not_allowed(), None)
+    //     }
+    // }
+
+        // close(self.file_fd);
+
+        // or open file every time when we cant open file
+
+
+    // fn create_response_part(req: &HttpRequest, is_get: bool) -> (HttpResponse, Option<String>) {
+    //     let mut path_to_file = req.uri.clone();
+    //     match FileHandler::get_file(self.path1, &mut path_to_file, is_get) {
+    //         Ok(value) => {
+    //             let (size, path, ext) = value;
+    //             let mut headers: HashMap<String, String> = HashMap::new();
+    //             headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
+    //             headers.insert(String::from("Content-Length"), size.to_string());
+    //             let mut path = Some(path);
+    //             if !is_get  {
+    //                 path = None;
+    //             }
+    //             return (HttpResponse::ok(headers, is_get), path);
+    //         },
+    //         Err(is_forbidden) => {
+    //             let status = match is_forbidden {
+    //                 true => return (HttpResponse::forbidden(), None),
+    //                 false => return (HttpResponse::not_found(), None)
+    //             };
+    //         }
+    //     }
+    // }
+
+
 static DOCUMENT_ROOT: &'static str = "/home/mavr/http-test";
 
 

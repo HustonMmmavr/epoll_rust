@@ -79,15 +79,7 @@ impl<'a> HttpClient<'a> {
         }
     }
 
-    // fn process_request(&self) -> HttpResponse {
-    //     let mut http_response = match self.req {
-    //         Some(ref http_request) => return self.create_response().0,
-    //         None => return HttpResponse::bad_request()
-    //     };
-    // }
-
     pub fn read(&mut self) -> Result<ClientState, Error> {
-        // if self.state == ClientState::READING 
         let mut buf: [u8; READ_LEN] = [0; READ_LEN];
         loop {
             let mut total_len = self.readed;
@@ -168,27 +160,6 @@ impl<'a> HttpClient<'a> {
             },
             None => return (HttpResponse::not_found(), None)
         }
-        // let req = self.req.unwrap();
-        // let mut path_to_file = req.uri.clone();
-        // match FileHandler::get_file(self.path1, &mut path_to_file, is_get) {
-        //     Ok(value) => {
-        //         let (size, path, ext) = value;
-        //         let mut headers: HashMap<String, String> = HashMap::new();
-        //         headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
-        //         headers.insert(String::from("Content-Length"), size.to_string());
-        //         let mut path = Some(path);
-        //         if !is_get  {
-        //             path = None;
-        //         }
-        //         return (HttpResponse::ok(headers, is_get), path);
-        //     },
-        //     Err(is_forbidden) => {
-        //         let status = match is_forbidden {
-        //             true => return (HttpResponse::forbidden(), None),
-        //             false => return (HttpResponse::not_found(), None)
-        //         };
-        //     }
-        // }
     }
 
     fn create_response(&self) -> (HttpResponse, Option<String>) {
@@ -207,14 +178,6 @@ impl<'a> HttpClient<'a> {
             1 => return self.create_response_part(false),
             _ => return (HttpResponse::not_allowed(), None)
         }
-        // match self.req.unwrap().method.as_ref() {
-        //     "GET" => return self.create_response_part(true),
-        //     "HEAD" => {
-        //         println!("HEAD");
-        //         return self.create_response_part(false);
-        //     } 
-        //     _ => return (HttpResponse::not_allowed(), None)
-        // }
     }
 
     pub fn write(&mut self, path: &str) -> Result<ClientState, Error> {
@@ -256,7 +219,6 @@ impl<'a> HttpClient<'a> {
                 },
                 Err(err) => {
                     print!("Write {:?}", err);
-                    // this part
                     match err {
                         Sys(errno) => {
                             match errno {
@@ -280,8 +242,6 @@ impl<'a> HttpClient<'a> {
             }; 
         }
 
-        // close(self.socket);
-        // shutdown(self.socket, Shutdown::Both);
         if self.state == ClientState::FILE_WRITING {
             let mut offt = self.file_sended as i64; 
             match sendfile(self.socket, self.file_fd, Some(&mut offt), FILE_BUF) {
@@ -289,8 +249,6 @@ impl<'a> HttpClient<'a> {
                     self.file_sended += sended;
                     if self.file_sended >= self.file_len {
                         self.state = ClientState::RESPONSE_WRITED;
-                        //close(self.file_fd);
-                        //self.file_fd = -1;
                         return Ok(self.state.clone());
                     }
                 }, 
@@ -319,6 +277,52 @@ impl<'a> HttpClient<'a> {
     }
 }
 
+        // let req = self.req.unwrap();
+        // let mut path_to_file = req.uri.clone();
+        // match FileHandler::get_file(self.path1, &mut path_to_file, is_get) {
+        //     Ok(value) => {
+        //         let (size, path, ext) = value;
+        //         let mut headers: HashMap<String, String> = HashMap::new();
+        //         headers.insert(String::from("Content-type"), HttpClient::get_http_ext(&ext));
+        //         headers.insert(String::from("Content-Length"), size.to_string());
+        //         let mut path = Some(path);
+        //         if !is_get  {
+        //             path = None;
+        //         }
+        //         return (HttpResponse::ok(headers, is_get), path);
+        //     },
+        //     Err(is_forbidden) => {
+        //         let status = match is_forbidden {
+        //             true => return (HttpResponse::forbidden(), None),
+        //             false => return (HttpResponse::not_found(), None)
+        //         };
+        //     }
+        // }
+
+
+        // match self.req.unwrap().method.as_ref() {
+        //     "GET" => return self.create_response_part(true),
+        //     "HEAD" => {
+        //         println!("HEAD");
+        //         return self.create_response_part(false);
+        //     } 
+        //     _ => return (HttpResponse::not_allowed(), None)
+        // }
+
+
+                        //close(self.file_fd);
+                        //self.file_fd = -1;
+
+        // close(self.socket);
+        // shutdown(self.socket, Shutdown::Both);
+
+
+    // fn process_request(&self) -> HttpResponse {
+    //     let mut http_response = match self.req {
+    //         Some(ref http_request) => return self.create_response().0,
+    //         None => return HttpResponse::bad_request()
+    //     };
+    // }
 
     // fn create_response(req: &HttpRequest) -> (HttpResponse, Option<String>) {
     //     match req.method.as_ref() {
