@@ -30,12 +30,6 @@ impl Config {
 pub struct ConfigReader;
 
 impl ConfigReader {
-    // pub fn new(path_to_config: String) -> Self {
-    //     return ConfigReader {
-    //         path_to_config: path_to_config
-    //     }
-    // }
-
     pub fn default() -> Config {
         return Config {
             path_to_static: String::from("."),

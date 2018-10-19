@@ -1,0 +1,113 @@
+
+
+//     for i in 0..(cpu_limit) {
+//         let child_topo = topo.clone();
+//         let ids = idxs.clone();
+//         let path = config.get_path_to_static();
+//         let mut tid = 0;
+//         v.push(thread::spawn(move || {
+//             tid = unsafe {libc::pthread_self()};
+//             {
+//                 let mut locked_topo = child_topo.lock().unwrap();
+//                 let before = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+//                 let mut bind_to = cpuset_for_core(&*locked_topo, i);
+//                 bind_to.singlify();
+//                 locked_topo
+//                     .set_cpubind_for_thread(tid, bind_to, CPUBIND_THREAD)
+//                     .unwrap();
+//                 let after = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+//                 println!("Thread {}: Before {:?}, After {:?}", i, before, after);
+//             }
+//                     epoll_loop(server_sock.clone(), &path);
+//                 }
+//             )
+//             // 140737267054336
+//         );
+//         // println!("{:?}", v[i].thread().;
+//         // let tid = unsafe {}
+//         print!("i{:?}", idxs);
+//     }
+
+//     for i in 0..(cpu_limit) {
+//         let child_topo = topo.clone();
+//         let ids = idxs.clone();
+//         let path = config.get_path_to_static();
+//         let mut tid = 0;
+//         v.push(thread::spawn(move || {
+//             tid = unsafe {libc::pthread_self()};
+//             {
+//                 let mut locked_topo = child_topo.lock().unwrap();
+//                 let mut bind_to = cpuset_for_core(&*locked_topo, i);
+//                 bind_to.singlify();
+//                 locked_topo
+//                     .set_cpubind_for_thread(tid, bind_to, CPUBIND_THREAD)
+//                     .unwrap();
+//                 println!("Thread {}: Before {:?}, After {:?}", i, before, after);
+
+//             }
+//             // let tid = unsafe { libc::pthread_self() };
+//             // let mut locked_topo = child_topo.lock().unwrap();
+
+//             // let before = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+//             // // let before = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+
+//             // let mut bind_to = cpuset_for_core(&*locked_topo, i);
+
+//             // bind_to.singlify();
+
+//             // // Set the binding.
+//             // locked_topo
+//             //     .set_cpubind_for_thread(tid, bind_to, CPUBIND_THREAD)
+//             //     .unwrap();
+
+//             //     // Thread binding after explicit set.
+//             // let after = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+// // 
+//         //    loop {}
+//                     epoll_loop(server_sock.clone(), &path);
+//                 }
+//             )
+//             // 140737267054336
+//         );
+//         // println!("{:?}", v[i].thread().;
+//         // let tid = unsafe {}
+//         print!("i{:?}", idxs);
+//     }
+
+    
+
+    // let cpu_limit = config.get_cpu_count();
+    // println!("{:?}", cpu_limit);
+    // let handles: Vec<_> = (0..cpu_limit).map(|i| {
+    //     let child_topo = topo.clone();
+    //     let path = config.get_path_to_static();
+
+    //     thread::spawn(move || {
+    //         let tid = unsafe { libc::pthread_self() };
+    //         let mut locked_topo = child_topo.lock().unwrap();
+
+    //         let before = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+    //         // let before = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+
+    //         let mut bind_to = cpuset_for_core(&*locked_topo, i);
+
+    //         bind_to.singlify();
+
+    //         // Set the binding.
+    //         locked_topo
+    //             .set_cpubind_for_thread(tid, bind_to, CPUBIND_THREAD)
+    //             .unwrap();
+
+    //             // Thread binding after explicit set.
+    //         let after = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+
+    //         // locked_topo.set_cpubind_for_thread(tid, bind_to, CPUBIND_THREAD).unwrap();
+    //         println!("Thread {}: Before {:?}, After {:?}", i, before, after);
+    //         //epoll_loop(server_sock.clone(), &path);
+    //         // let after = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+    //     })
+    // }).collect();
+
+    // for h in handles {
+    //     h.join();
+    // }

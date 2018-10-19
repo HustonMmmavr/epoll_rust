@@ -1,6 +1,8 @@
 extern crate nix;
 extern crate chrono;
 extern crate num_cpus;
+extern crate hwloc;
+extern crate libc;
 mod file_handler;
 mod config_reader;
 mod client;
@@ -19,6 +21,10 @@ use nix::fcntl::*;
 use std::thread;
 use nix::Error::Sys;
 use client::client::{ClientState, HttpClient};
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::ops::Sub;
+use std::sync::{Arc, Mutex};
+use hwloc::{Topology, ObjectType, CPUBIND_THREAD, CpuSet};
 
 #[cfg(feature = "my_debug")]
 macro_rules! debug_print {
@@ -44,7 +50,7 @@ fn socket_to_nonblock(sock: RawFd) -> Result<(), nix::Error> {
     }
 }
 
-fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
+fn epoll_loop<'a>(server_sock: RawFd, path: &'a str) -> nix::Result<()> {
     let mut clients: HashMap<RawFd, HttpClient<'a>> = HashMap::new();
     let epfd = epoll_create1(EpollCreateFlags::from_bits(0).unwrap())?;
 
@@ -62,7 +68,7 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
             Ok(n) => n,
             Err(e) => {
                 println!("Err wait {:?}", e);
-                panic!();
+                panic!("vuh");
             }
         };
 
@@ -79,116 +85,107 @@ fn epoll_loop<'a>(server_sock: RawFd, path: &'a str)-> nix::Result<()> {
                     let client = clients.remove(&cur_socket).unwrap();
                     client.clear();
                     continue;
-            }                
+            } else {               
+                if server_sock == cur_socket {
+                    debug_print!("accept");
+                    loop {
+                        let client_fd = match accept(server_sock) {
+                            Ok(client) => {
+                                debug_print!("Accepted {:?} Closed {:?} Dif: {:?} Refused {:?} Events len: {:?}", accepted, closed, accepted - closed, refused, nfds);
+                                client
+                            }
+                            Err(err) => {
+                                debug_print!("Error accept {:?}", err);
+                                break;
+                            }
+                        };
 
-
-            if server_sock == cur_socket {
-                debug_print!("accept");
-                loop {
-                    let client_fd = match accept(server_sock) {
-                        Ok(client) => {
-                            accepted += 1;
-                            debug_print!("Accepted {:?} Closed {:?} Dif: {:?} Refused {:?} Events len: {:?}", accepted, closed, accepted - closed, refused, nfds);
-                            client
+                        match socket_to_nonblock(client_fd) {
+                            Ok(_) => {},
+                            Err(err) => println!("Non block err {:?}", err)
                         }
-                        Err(err) => {
-                            refused += 1;
-                            debug_print!("Error accept {:?}", err);
-                            break;
+
+                        let mut ev = EpollEvent::new(EpollFlags::EPOLLIN | EpollFlags::EPOLLET, client_fd as u64);
+                        match epoll_ctl(epfd, EpollOp::EpollCtlAdd, client_fd, &mut ev) {
+                            Ok(e) => {},
+                            Err(err) => println!("Server accept ctl {:?}", err)
                         }
-                    };
-
-                    match socket_to_nonblock(client_fd) {
-                        Ok(_) => {},
-                        Err(err) => println!("Non block err {:?}", err)
+                        clients.insert(client_fd, HttpClient::new(client_fd, EpollFlags::EPOLLIN, path));
+                        break;
                     }
-
-                    let mut ev = EpollEvent::new(EpollFlags::EPOLLIN | EpollFlags::EPOLLET, client_fd as u64);
-                    match epoll_ctl(epfd, EpollOp::EpollCtlAdd, client_fd, &mut ev) {
-                        Ok(e) => {},
-                        Err(err) => println!("Server accept ctl {:?}", err)
-                    }
-                    clients.insert(client_fd, HttpClient::new(client_fd, EpollFlags::EPOLLIN, path));
-                    break;
+                    debug_print!("loop breaked");
+                    continue;
                 }
-                debug_print!("loop breaked");
+                    
+                if cur_event == cur_event & EpollFlags::EPOLLIN {
+                    let mut is_broken = false;
+                    let mut readed = false;
+                    {
+                        let client = clients.get_mut(&cur_socket).unwrap();
+                        match client.read() {
+                            Ok(cli_state) => {
+                                match cli_state {
+                                    ClientState::READING => {},
+                                    ClientState::REQUEST_READED => {
+                                        let mut ev = EpollEvent::new(EpollFlags::EPOLLOUT, cur_socket as u64);
+                                        match epoll_ctl(epfd, EpollOp::EpollCtlMod, cur_socket, &mut ev) {
+                                            Ok(e) => {},
+                                            Err(err) => println!("Read ctl Err {:?}", err)
+                                        }
+                                        readed = true;
+                                    },
+                                    ClientState::ERROR => is_broken = true,
+                                    _ => is_broken = true
+                                }
+                            }, 
+                            Err(err) => {
+                                is_broken = true;
+                                println!("{:?}", err);
+                            }
+                        }
+                    }
+
+                    if is_broken && !readed {
+                        close(cur_socket);
+                        epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket, &mut epoll_events[i]);
+                        let cl = clients.remove(&cur_socket);
+                    }
+                    continue;
+                }
+
+                if cur_event == cur_event & EpollFlags::EPOLLOUT {
+                    let mut need_to_close = false;
+                    {
+                        let client = clients.get_mut(&cur_socket).unwrap();
+                        match client.write(path) {
+                            Ok(state) => {
+                                match state {
+                                    ClientState::RESPONSE_WRITED => need_to_close = true,
+                                    ClientState::FILE_WRITING => {},
+                                    ClientState::WRITING => {},
+                                    _ => need_to_close = true
+                                }
+                            },
+                            Err(err) => {
+                                need_to_close = true;
+                            }
+                        }
+                    }
+
+                    if (need_to_close) {
+                        match epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket as i32, &mut epoll_events[i]) {
+                            Ok(e) => {},
+                            Err(err) => println!("Err epollctl write {:?}", err)
+                        }
+
+                        let cl = clients.remove(&cur_socket).unwrap();
+                        close(cur_socket as i32)?;
+                        cl.clear();
+                        debug_print!("closed: {:?}", closed);
+                    }
+                }
                 continue;
             }
-                
-            if cur_event == cur_event & EpollFlags::EPOLLIN {
-                let mut is_broken = false;
-                
-                {
-                    let client = clients.get_mut(&cur_socket).unwrap();
-                    match client.read() {
-                        Ok(cli_state) => {
-                            match cli_state {
-                                ClientState::READING => {},
-                                ClientState::REQUEST_READED => {
-                                    let mut ev = EpollEvent::new(EpollFlags::EPOLLOUT, cur_socket as u64);
-                                    match epoll_ctl(epfd, EpollOp::EpollCtlMod, cur_socket, &mut ev) {
-                                        Ok(e) => {},
-                                        Err(err) => println!("Read ctl Err {:?}", err)
-                                    }
-                                    continue;
-                                },
-                                ClientState::ERROR => is_broken = true,
-                                _ => is_broken = true
-                            }
-                        }, 
-                        Err(err) => {
-                            is_broken = true;
-                            println!("{:?}", err);
-                        }
-                    }
-                }
-
-                if is_broken {
-                    close(cur_socket);
-                    epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket, &mut epoll_events[i]);
-                    let cl = clients.remove(&cur_socket);
-                }
-                continue;
-            }
-
-            if cur_event == cur_event & EpollFlags::EPOLLOUT {
-
-                let mut need_to_close = false;
-                {
-                    let client = clients.get_mut(&cur_socket).unwrap();
-                    match client.write(path) {
-                        Ok(state) => {
-                            match state {
-                                ClientState::RESPONSE_WRITED => need_to_close = true,
-                                ClientState::FILE_WRITING => {},
-                                ClientState::WRITING => {},
-                                _ => need_to_close = true
-                            }
-                        },
-                        Err(err) => {
-                            need_to_close = true;
-                        }
-                    }
-                }
-
-                if (need_to_close) {
-                    match epoll_ctl(epfd, EpollOp::EpollCtlDel, cur_socket as i32, &mut epoll_events[i]) {
-                        Ok(e) => {},
-                        Err(err) => println!("Err epollctl write {:?}", err)
-                    }
-
-                    let cl = clients.remove(&cur_socket).unwrap();
-                    match shutdown(cur_socket as i32, Shutdown::Both) {
-                        Ok(e) => {},
-                        Err(err) => println!("Err shutdown {:?}", err)
-                    }
-                    close(cur_socket as i32)?;
-                    closed += 1;
-                    cl.clear();
-                    debug_print!("closed: {:?}", closed);
-                }
-            }
-            continue;
         }
     }
 }
@@ -224,21 +221,49 @@ fn main() {
         Err(err) => panic!("Error listen: {:?}", err)
     }
     
-    let mut v = vec![];
-
-
+    let topo = Arc::new(Mutex::new(Topology::new()));
     let cpu_limit = config.get_cpu_count();
-    // println!("cpu limit {:?}", cpu_limit);
-    for i in 0..cpu_limit {
-        let path = config.get_path_to_static();
-        v.push(thread::spawn(move || {
-                    epoll_loop(server_sock.clone(), &path);
-                }
-            )
-        );
-    }
+    let handles: Vec<_> = (0..cpu_limit)
+        .map(|i| {
+            let path = config.get_path_to_static();
+            thread::spawn(move || {
+                epoll_loop(server_sock.clone(), &path);
+            })
+        }).collect();
 
-    for th in v {
-        th.join();
+    // performance worse
+    // let handles: Vec<_> = (0..cpu_limit)
+    //     .map(|i| {
+    //         let child_topo = topo.clone();
+    //         let path = config.get_path_to_static();
+    //         thread::spawn(move || {
+    //             {
+    //                 let tid = unsafe {libc::pthread_self()};
+    //                 let mut locked_topo = child_topo.lock().unwrap();
+    //                 let before = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+    //                 let mut bind_to = cpuset_for_core(&*locked_topo, i);
+    //                 bind_to.singlify();
+    //                 locked_topo
+    //                     .set_cpubind_for_thread(tid, bind_to, CPUBIND_THREAD)
+    //                     .unwrap();
+    //                 let after = locked_topo.get_cpubind_for_thread(tid, CPUBIND_THREAD);
+    //                 println!("Thread {}: Before {:?}, After {:?}", i, before, after);
+    //             }
+    //             epoll_loop(server_sock.clone(), &path);
+    //         })
+    //     }).collect();
+
+    for h in handles {
+        h.join();
     }
 }
+
+
+fn cpuset_for_core(topology: &Topology, idx: usize) -> CpuSet {
+    let cores = (*topology).objects_with_type(&ObjectType::Core).unwrap();
+    match cores.get(idx) {
+        Some(val) => val.cpuset().unwrap(),
+        None => panic!("No Core found with id {}", idx)
+    }
+}
+
