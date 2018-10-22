@@ -1,0 +1,323 @@
+Hi!
+Its me again)
+I’m writing http server with epoll and threading. It work fine, but i’ve met some problems.
+Firstly when i’m running my program in developer mode, version with 4 threads is two times, 
+faster than version with one thread but when i’m running in release version with one thread is 
+faster then multithreaded (not much, but still faster)
+
+Also when i run ab with concurrency 1000 and 100000 requests 
+multithreaded version (dev, release) works fine and version with one thread freezes at the end of test and fails on ~ 98-99k request.
+
+
+        // let mut count_wait_accept = 0;
+        // for i in 0..nfds {
+        //     let sock = epoll_events[i].data() as i32;
+        //     if sock == server_sock {
+        //         count_wait_accept += 1;
+        //     }
+        // }
+
+        // count_wait_accept /= worker_count;
+
+                           // count_acc += 1;
+                        // if worker_count == 1 {
+                        //     continue;
+                        // } else {
+                        //     if count_acc > 1 {
+                        //         break
+                        //     }
+                        // }
+                        // if count_acc >= count_wait_accept {
+                        //     break
+                        // }
+                        // cli_size += 1;
+                        // break;
+
+Here is my main part of server:
+        fn epoll_loop<'a>(server_sock: RawFd, path: &'a str) -> nix::Result<()> {
+        let mut clients: HashMap<RawFd, HttpClient<'a>> = HashMap::new();
+        let epfd = epoll_create1(EpollCreateFlags::from_bits(0).unwrap())?;
+
+        let mut ev = EpollEvent::new(EpollFlags::EPOLLIN, server_sock as u64);
+        epoll_ctl(epfd, EpollOp::EpollCtlAdd, server_sock, &mut ev)?;
+
+        let mut epoll_events = vec![EpollEvent::empty(); 1024];
+        let critical_error = false;
+        let mut accepted = 0;
+        let mut closed = 0;
+
+        let mut refused = 0;
+        loop {
+            let nfds = match epoll_wait(epfd, &mut epoll_events, -1) {
+                Ok(n) => n,
+                Err(e) => {
+                    println!("Err wait {:?}", e);
+                    panic!();
+                }
+            };
+
+            for i in 0..nfds {
+                let cur_socket = epoll_events[i].data() as i32;
+                let cur_event = epoll_events[i].events();
+
+                if cur_event == cur_event & EpollFlags::EPOLLERR || cur_event == cur_event & EpollFlags::EPOLLHUP ||
+                    cur_event != cur_event & (EpollFlags::EPOLLIN|EpollFlags::EPOLLOUT) || cur_event == cur_event & EpollFlags::EPOLLRDHUP {
+                        ...
+                } else {               
+                    if server_sock == cur_socket {
+                        loop {
+                            let client_fd = match accept(server_sock) {
+                                ...
+                            };
+
+                            let mut ev = EpollEvent::new(EpollFlags::EPOLLIN | EpollFlags::EPOLLET, client_fd as u64);
+                            match epoll_ctl(epfd, EpollOp::EpollCtlAdd, client_fd, &mut ev) {
+                                ...
+                            }
+                            break;
+                        }
+                        continue;
+                    }
+                        
+                    if cur_event == cur_event & EpollFlags::EPOLLIN {
+                        // read  client
+                        continue;
+                    }
+
+                    if cur_event == cur_event & EpollFlags::EPOLLOUT {
+                        // write client
+                    }
+                    continue;
+                }
+            }
+        }
+    }
+
+    fn main() {
+        let config = match ConfigReader::read() {
+            Ok(conf) => conf, 
+            Err(err) => {
+                println!("Error parse config {:?}", err);
+                panic!("");
+            }
+        };
+
+        let server_sock = match socket(AddressFamily::Inet, SockType::Stream, SockFlag::SOCK_NONBLOCK, SockProtocol::Tcp) {
+            Ok(sock) => sock,
+            Err(err) => panic!("{:?}", err)
+        };
+
+        match setsockopt(server_sock, ReuseAddr, &true) {
+            Ok(_) => {},
+            Err(err) => panic!("Error set sock opt {:?}", err)
+        }
+        let addr = SockAddr::new_inet(InetAddr::new(IpAddr::new_v4(0, 0, 0, 0), config.get_port() as u16));
+        
+        match bind(server_sock, &addr) {
+            Ok(_) => {},
+            Err(err) => panic!("Error bind: {:?}", err)
+        }   
+
+        socket_to_nonblock(server_sock);
+        match listen(server_sock, 1024) {
+            Ok(_) => {},
+            Err(err) => panic!("Error listen: {:?}", err)
+        }
+        
+        let mut v = vec![];
+
+        let cpu_limit = config.get_cpu_count();
+        println!("{:?}", cpu_limit);
+
+        for i in 0..cpu_limit {
+            let path = config.get_path_to_static();
+            v.push(thread::spawn(move || {
+                        epoll_loop(server_sock.clone(), &path);
+                    }
+                )
+            );
+        }
+
+        for th in v {
+            th.join();
+        }
+    }
+
+Also here is my tests 
+1) Request GET for file that not exists (returns simple Not found) ab -n 100000 -c 1000 
+    Debug version: 
+        One thread:  
+            apr_socket_recv: Connection reset by peer (104)
+            Total of 99370 requests completed
+ 
+        Four threads: 
+            Document Path:          /httptest/160313
+            Document Length:        0 bytes
+
+            Concurrency Level:      1000
+            Complete requests:      100000
+            Failed requests:        0
+            Non-2xx responses:      100000
+            Total  transferred:      10100000 bytes
+            HTML transferred:       0 bytes
+            Requests  per second:    22593.61 [#/sec] (mean)
+
+    Release version: 
+        One thread:   
+            Document Path:          /httptest/160313
+            Document Length:        0 bytes
+
+            Concurrency Level:      1000
+            Complete requests:      100000
+            Failed requests:        0
+            Non-2xx responses:      100000
+            Total transferred:      10100000 bytes
+            HTML transferred:       0 bytes
+            Requests per second:    24730.56 [#/sec] (mean)
+
+        Four threads:  
+            Document Path:          /httptest/160313
+            Document Length:        0 bytes
+
+            Concurrency Level:      1000
+            Complete requests:      100000
+            Failed requests:        0
+            Non-2xx responses:      100000
+            Total transferred:      10100000 bytes
+            HTML transferred:       0 bytes
+            Requests per second:    21852.36 [#/sec] (mean)
+
+
+2) Request For jpg file (263 kb) ab -n 100000 -c 1000 
+    Debug version: 
+        One thread: 
+            apr_socket_recv: Connection reset by peer (104)
+            Total of 92533 requests completed
+
+        Four threads:
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      1000
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    10360.45 [#/sec] (mean)
+
+
+    Release version: 
+        One thread: 
+            apr_socket_recv: Connection reset by peer (104)
+            Total of 99339 requests completed
+
+        Four threads:
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      1000
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    10503.61 [#/sec] (mean)
+
+
+3) Request For jpg file (263 kb) ab -n 100000 -c 100
+    Debug version: 
+        One thread: 
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      100
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    6048.58 [#/sec] (mean)
+
+        Four threads:
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      100
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    12309.20 [#/sec] (mean)
+
+    Release version: 
+        One thread:  
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      100
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    11726.47 [#/sec] (mean)
+
+        Four threads:
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      100
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    11585.83 [#/sec] (mean)
+
+4) Request For jpg file (263 kb) ab -n 100000 -c 200
+    Debug version: 
+        One thread: 
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      200
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    3663.74 [#/sec] (mean)
+
+        Multithreaded: 
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      200
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    12538.52 [#/sec] (mean)
+
+
+    Release version: 
+        One thread: 
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      200
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    10552.98 [#/sec] (mean)
+
+        Multithreaded: 
+            Document Path:          /httptest/160313.jpg
+            Document Length:        267037 bytes
+
+            Concurrency Level:      200
+            Complete requests:      100000
+            Failed requests:        0
+            Total transferred:      26718100000 bytes
+            HTML transferred:       26703700000 bytes
+            Requests per second:    12257.80 [#/sec] (mean)
+
+
+I can't clearly understand is it normal behaviour, or its my bad in setting epoll and threads, or its incorrect client serving.
+Also for sending file i use sendfile with batch size 512 kb;

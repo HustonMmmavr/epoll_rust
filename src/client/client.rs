@@ -20,7 +20,7 @@ use std::fs;
 use std::panic;
 use nix::sys::socket::sockopt::{SocketError};
 
-const FILE_BUF: usize =  524288; 
+const FILE_BUF: usize =  5120000;//524288; 
 const READ_LEN: usize = 8192;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -186,9 +186,20 @@ impl<'a> HttpClient<'a> {
             let (mut resp, path) = self.create_response();
             match path {
                 Some(path) => {
-                    let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
+                    // let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
                     self.file_len = fs::metadata(&path).unwrap().len() as usize;
+
                     self.path_to_file = String::from(path);
+                    // if self.need_send_file {
+                        let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
+                        self.file_fd = match open(Path::new(&self.path_to_file), OFlag::O_RDONLY, mode) {
+                            Ok(fd) => fd, 
+                            Err(err) => {
+                                println!("{:?}", err);
+                                return Err(err)//Ok(ClientState::FILE_WRITING)
+                            }
+                        }; 
+                    // }
                     self.buffer_write = resp.to_vec_response();
                     self.need_send_file = true;
 
@@ -225,15 +236,15 @@ impl<'a> HttpClient<'a> {
             }
         }
 
-        if self.file_fd == -1 && self.need_send_file {
-            let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
-            self.file_fd = match open(Path::new(&self.path_to_file), OFlag::O_RDONLY, mode) {
-                Ok(fd) => fd, 
-                Err(err) => {
-                    return Ok(ClientState::FILE_WRITING)
-                }
-            }; 
-        }
+        // if self.file_fd == -1 && self.need_send_file {
+        //     let mode = Mode::S_IRUSR | Mode::S_IRGRP | Mode::S_IROTH;
+        //     self.file_fd = match open(Path::new(&self.path_to_file), OFlag::O_RDONLY, mode) {
+        //         Ok(fd) => fd, 
+        //         Err(err) => {
+        //             return Ok(ClientState::FILE_WRITING)
+        //         }
+        //     }; 
+        // }
 
         if self.state == ClientState::FILE_WRITING {
             let mut offt = self.file_sended as i64; 
@@ -247,7 +258,7 @@ impl<'a> HttpClient<'a> {
                     return Ok(ClientState::FILE_WRITING)
                 }, 
                 Err(err) => {
-                    print!("Sendfile {:?}", err);
+                    // print!("Sendfile {:?}", err);
                     if self.file_sended >= self.file_len {
                         return Ok(ClientState::RESPONSE_WRITED);
                     }

